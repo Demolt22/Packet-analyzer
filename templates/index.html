@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packet Capture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+        #startCapture { background-color: #4CAF50; color: white; }
+        #stopCapture { background-color: #f44336; color: white; }
+        #downloadData { background-color: #008CBA; color: white; }
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background: #333;
+            color: white;
+        }
+        #jsonOutput {
+            display: none;
+            text-align: left;
+            margin: 20px auto;
+            width: 80%;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            overflow-y: scroll;
+            max-height: 300px;
+        }
+        /* Added style for JSON-like data in table cells */
+        .json-data {
+            white-space: pre-wrap; /* Allows wrapping of JSON strings */
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time Network Packet Capture</h1>
+    <button id="startCapture">Start Capture</button>
+    <button id="stopCapture">Stop Capture</button>
+    <button id="downloadData">Download JSON</button>
+
+    <table id="packetTable">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Source IP</th>
+                <th>Destination IP</th>
+                <th>Protocol</th>
+                <th>SYN</th>
+                <th>ACK</th>
+                <th>Src Port</th>
+                <th>Dest Port</th>
+                <th>Length</th>
+                <th>HTTP Code</th>
+                <th>ACK Number</th>
+                <th>Window Size</th>
+                <th>Sequence Number</th>
+                <th>Interface</th>
+                <th>IP Type</th>
+                <th>Checksum Status</th>
+                <th>PPS</th>
+                <th>Inter-Arrival Time</th>
+                <th>TCP Flag Count</th>
+                <th>Wi-Fi Frame Info</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        let interval;
+
+        document.getElementById('startCapture').addEventListener('click', function() {
+            fetch('/start_capture', { method: 'POST' });
+            interval = setInterval(updateTable, 2000);
+        });
+
+        document.getElementById('stopCapture').addEventListener('click', function() {
+            fetch('/stop_capture', { method: 'POST' });
+            clearInterval(interval);
+        });
+
+        document.getElementById('downloadData').addEventListener('click', function() {
+            window.location.href = '/download_data';
+        });
+
+        function updateTable() {
+            fetch('/get_data')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#packetTable tbody');
+                    tableBody.innerHTML = '';
+                    data.forEach(packet => {
+                        // Format tcp_flag_count and wifi_frame_info as readable JSON strings
+                        const tcpFlagCountStr = JSON.stringify(packet.tcp_flag_count, null, 2);
+                        const wifiFrameInfoStr = packet.wifi_frame_info === "N/A"
+                            ? "N/A"
+                            : JSON.stringify(packet.wifi_frame_info, null, 2);
+
+                        let row = `<tr>
+                            <td>${packet.timestamp}</td>
+                            <td>${packet.source_ip}</td>
+                            <td>${packet.destination_ip}</td>
+                            <td>${packet.protocol}</td>
+                            <td>${packet.syn_flag}</td>
+                            <td>${packet.ack_flag}</td>
+                            <td>${packet.source_port}</td>
+                            <td>${packet.destination_port}</td>
+                            <td>${packet.length}</td>
+                            <td>${packet.http_code}</td>
+                            <td>${packet.ack_number}</td>
+                            <td>${packet.window_size}</td>
+                            <td>${packet.sequence_number}</td>
+                            <td>${packet.interface}</td>
+                            <td>${packet.ip_type}</td>
+                            <td>${packet.checksum_status}</td>
+                            <td>${packet.pps}</td>
+                            <td>${packet.inter_arrival_time}</td>
+                            <td class="json-data">${tcpFlagCountStr}</td>
+                            <td class="json-data">${wifiFrameInfoStr}</td>
+                        </tr>`;
+                        tableBody.innerHTML += row;
+                    });
+                });
+        }
+    </script>
+</body>
+</html>
